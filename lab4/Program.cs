@@ -26,12 +26,12 @@ namespace lab4
                                         "\t/delete *name of share* [*name of share*...] - deletes one or several shares from list\n" +
                                         "\t/delete &all - clean list of shares";
 
-        private static List<Share> AddedShares = new List<Share>();
-        private static int SharesQuant = -1;
+        private static List<Share> _addedShares = new List<Share>();
+        private static int _sharesQuant = 0;
 
         private static void Main()
         {
-            var web = new HtmlWeb
+            var unused = new HtmlWeb
             {
                 PreRequest = OnPreRequest
             };
@@ -74,12 +74,12 @@ namespace lab4
                 if (List_Share(sender, e))
                 {
                     bot = sender as TelegramBotClient;
-                    bot.SendTextMessageAsync(e.Message.Chat.Id, "All shares was showed");
+                    bot?.SendTextMessageAsync(e.Message.Chat.Id, "All shares was showed");
                 }
                 else
                 {
                     bot = sender as TelegramBotClient;
-                    bot.SendTextMessageAsync(e.Message.Chat.Id, "Nothing to show");
+                    bot?.SendTextMessageAsync(e.Message.Chat.Id, "Nothing to show");
                 }
 
                 return;
@@ -91,18 +91,14 @@ namespace lab4
                 if (Add_Several_Shares(userMessWord))
                 {
                     bot = sender as TelegramBotClient;
-                    if (count > 2)
-                        bot.SendTextMessageAsync(e.Message.Chat.Id, "All shares were added in list");
-                    else
-                        bot.SendTextMessageAsync(e.Message.Chat.Id, "Share Added in list");
+                    bot?.SendTextMessageAsync(e.Message.Chat.Id,
+                        count > 2 ? "All shares were added in list" : "Share Added in list");
                 }
                 else
                 {
                     bot = sender as TelegramBotClient;
-                    if (count > 2)
-                        bot.SendTextMessageAsync(e.Message.Chat.Id, "Some shares weren't added in list");
-                    else
-                        bot.SendTextMessageAsync(e.Message.Chat.Id, "Share was not added in list");
+                    bot?.SendTextMessageAsync(e.Message.Chat.Id,
+                        count > 2 ? "Some shares weren't added in list" : "Share was not added in list");
                 }
 
                 return;
@@ -112,7 +108,7 @@ namespace lab4
             if (userMessWord[0] == "/help")
             {
                 bot = sender as TelegramBotClient;
-                bot.SendTextMessageAsync(e.Message.Chat.Id, HelpDesk);
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, HelpDesk);
                 return;
             }
 
@@ -121,55 +117,47 @@ namespace lab4
             {
                 if (userMessWord[1] == "&all")
                 {
-                    AddedShares.RemoveRange(0, SharesQuant + 1);
-                    SharesQuant = -1;
+                    _addedShares.RemoveRange(0, _sharesQuant + 1);
+                    _sharesQuant = 0;
                     bot = sender as TelegramBotClient;
-                    bot.SendTextMessageAsync(e.Message.Chat.Id, "All shares were deleted from list");
+                    bot?.SendTextMessageAsync(e.Message.Chat.Id, "All shares were deleted from list");
                 }
                 else
                 {
                     bot = sender as TelegramBotClient;
                     if (Del_Several_Shares(userMessWord))
-                        bot.SendTextMessageAsync(e.Message.Chat.Id, "Shares were deleted from list");
+                        bot?.SendTextMessageAsync(e.Message.Chat.Id, "Shares were deleted from list");
                     else
-                        bot.SendTextMessageAsync(e.Message.Chat.Id, "Some shares were not deleted from list");
+                        bot?.SendTextMessageAsync(e.Message.Chat.Id, "Some shares were not deleted from list");
                 }
 
                 return;
             }
 
-            bot.SendTextMessageAsync(e.Message.Chat.Id, "Wrong Command");
+            bot?.SendTextMessageAsync(e.Message.Chat.Id, "Wrong Command");
         }
 
         private static void Share_Info(object sender, MessageEventArgs e, int messType = Constants.ExtendedMess,
-            string ShareCode = null, int cost = 0)
+            string shareCode = null, int cost = 0)
         {
             var bot = sender as TelegramBotClient;
-
             var url = "https://finance.yahoo.com/quote/";
-
             var userMessWord = e.Message.Text.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
             var count = userMessWord.Length;
 
-            if (ShareCode == null)
-                if (count > 1)
-                    ShareCode = userMessWord[1];
-                else
-                    ShareCode = userMessWord[0];
+            if (shareCode == null) shareCode = (count > 1) ? userMessWord[1] : userMessWord[0];
 
-            url = url + ShareCode + '/';
+            url = url + shareCode + '/';
 
 
             var handler = new HttpClientHandler {AllowAutoRedirect = true};
             var httpClient = new HttpClient(handler);
-
             var response = httpClient.GetAsync(url).Result;
-
             var redirectUri = response.RequestMessage.RequestUri;
 
             var web = new HtmlWeb();
-
             var doc = web.Load(redirectUri);
+
 
 
             var elements = doc.DocumentNode.Descendants("div")
@@ -177,11 +165,9 @@ namespace lab4
                 .Where(x => x.Attributes["class"].Value == "D(ib) Mend(20px)" ||
                             x.Attributes["class"].Value == "D(ib) " ||
                             x.Attributes["class"].Value == "C($tertiaryColor) Fz(12px)").ToList();
-
             if (elements.Count == 0)
             {
-                var errbot = sender as TelegramBotClient;
-                errbot.SendTextMessageAsync(e.Message.Chat.Id, "Wrong share name");
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, "Wrong share name");
                 return;
             }
 
@@ -189,82 +175,80 @@ namespace lab4
                 .Where(x => x.Attributes["class"] != null)
                 .FirstOrDefault(x => x.Attributes["class"].Value == "Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)");
 
-            var SharesCost = descHtml.InnerText;
+            var sharesCost = descHtml?.InnerText;
 
 
             descHtml = elements.SelectMany(x => x.Descendants("h1"))
                 .Where(x => x.Attributes["class"] != null)
                 .FirstOrDefault(x => x.Attributes["class"].Value == "D(ib) Fz(18px)");
 
-            var ShareName = descHtml.InnerText;
+            var shareName = descHtml?.InnerText;
 
 
             descHtml = elements.SelectMany(x => x.DescendantsAndSelf("div"))
                 .Where(x => x.Attributes["class"] != null)
                 .FirstOrDefault(x => x.Attributes["class"].Value == "C($tertiaryColor) Fz(12px)");
 
-
-            var SharePlat = descHtml.InnerText;
-            var ShareVal = SharePlat[SharePlat.Length - 3] +
-                           SharePlat[SharePlat.Length - 2].ToString() + SharePlat[SharePlat.Length - 1];
+            var sharePlat = descHtml?.InnerText.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+            var shareVal = sharePlat?[^1]; // Takes last word in string, usual that is "USD"
 
 
-            if (messType == Constants.ShortMess)
+            if (messType == Constants.ShortMess)  //exiting from method if needs only short message
             {
-                var shortMess = ShareName + '\n' + SharesCost + ' ' + ShareVal;
-                bot.SendTextMessageAsync(e.Message.Chat.Id, shortMess);
+                var shortMess = shareName + '\n' + sharesCost + ' ' + shareVal;
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, shortMess);
                 Console.WriteLine(response);
                 return;
             }
 
-            if (messType == Constants.ExtendedMess)
+
+            if (messType == Constants.ExtendedMess)  //exiting from method for extended message
             {
-                var Mess = ShareName + '\n' + SharesCost + ' ' + ShareVal;
-                bot.SendTextMessageAsync(e.Message.Chat.Id, Mess);
+                var mess = shareName + '\n' + sharesCost + ' ' + shareVal;
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, mess);
                 Console.WriteLine(response);
-                return;
             }
         }
 
-        private static bool Add_Share(string ShareCode)
+        private static bool Add_Share(string shareCode)
         {
-            AddedShares.Add(new Share());
-            SharesQuant += 1;
-            AddedShares[SharesQuant].Name = ShareCode;
+            _sharesQuant += 1;
+            _addedShares.Add(new Share());
+            _addedShares[_sharesQuant].Name = shareCode;
             return true;
         }
 
-        private static bool Add_Several_Shares(string[] ShareCodes)
+        private static bool Add_Several_Shares(string[] shareCodes)
         {
-            for (var i = 1; i < ShareCodes.Length; i += 1)
-                if (!Add_Share(ShareCodes[i]))
+            for (var i = 1; i < shareCodes.Length; i += 1)
+                if (!Add_Share(shareCodes[i]))
                     return false;
             return true;
         }
 
-        private static bool Del_Share(string ShareCode)
+        private static bool Del_Share(string shareCode)
         {
-            foreach (var share in AddedShares.ToList())
-                if (share.Name == ShareCode)
-                    AddedShares.Remove(share);
-            SharesQuant -= 1;
+            foreach (var share in _addedShares.ToList())
+                if (share.Name == shareCode)
+                    _addedShares.Remove(share);
+            _sharesQuant -= 1;
             return true;
         }
 
-        private static bool Del_Several_Shares(string[] ShareCodes)
+        private static bool Del_Several_Shares(string[] shareCodes)
         {
-            for (var i = 1; i < ShareCodes.Length; i += 1)
-                if (!Del_Share(ShareCodes[i]))
+            for (var i = 1; i < shareCodes.Length; i += 1)
+                if (!Del_Share(shareCodes[i]))
                     return false;
-            AddedShares = AddedShares.ToList();
+            _addedShares = _addedShares.ToList();
             return true;
         }
 
         private static bool List_Share(object sender, MessageEventArgs e)
         {
-            foreach (var share in AddedShares) Share_Info(sender, e, 1, share.Name);
+            foreach (var share in _addedShares) Share_Info(sender, e, 1, share.Name);
 
-            return SharesQuant != -1;
+            return _sharesQuant != -1;
         }
 
         private class Share
