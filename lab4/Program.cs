@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using HtmlAgilityPack;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -12,11 +14,12 @@ namespace lab4
 {
     internal class Program
     {
+        private static System.Timers.Timer _sTimer;
         public static class Constants
         {
             public const int ShortMess = 1;
             public const int ExtendedMess = 2;
-            public const int NullMess = 0;
+            public const int EventMess = 0;
 
         }
 
@@ -24,7 +27,9 @@ namespace lab4
                                         "\t/add *name of share* [*name of share*...] - adds one or several shares in list\n" +
                                         "\t/list shows you all short information about all shares in list\n" +
                                         "\t/delete *name of share* [*name of share*...] - deletes one or several shares from list\n" +
-                                        "\t/delete &all - clean list of shares";
+                                        "\t/delete &all - clean list of shares\n" +
+                                        "\t/start_checking - starts send shares info non-stop\n" +
+                                        "\t/stop_checking - stops send shares info";
 
         private static List<Share> _addedShares = new List<Share>();
         private static int _sharesQuant = 0;
@@ -38,6 +43,7 @@ namespace lab4
 
             var bot = new TelegramBotClient("1743657186:AAEyqLtqL95eKUZANc0hefOsySyWgcz7dVc");
 
+            SetTimer();
             bot.StartReceiving();
 
             bot.OnMessage += Bot_OnMessage;
@@ -45,6 +51,13 @@ namespace lab4
             Console.ReadLine();
 
             bot.StopReceiving();
+        }
+
+        private static void SetTimer()
+        {
+            _sTimer = new System.Timers.Timer(15000);
+            _sTimer.AutoReset = true;
+            _sTimer.Enabled = false;
         }
 
         private static bool OnPreRequest(HttpWebRequest request)
@@ -126,11 +139,30 @@ namespace lab4
                 {
                     bot = sender as TelegramBotClient;
                     if (Del_Several_Shares(userMessWord))
-                        bot?.SendTextMessageAsync(e.Message.Chat.Id, "Shares were deleted from list");
+                        bot?.SendTextMessageAsync(e.Message.Chat.Id,
+                            count > 2 ? "Shares were deleted from list" : "Share was deleted from list");
                     else
-                        bot?.SendTextMessageAsync(e.Message.Chat.Id, "Some shares were not deleted from list");
+                        bot?.SendTextMessageAsync(e.Message.Chat.Id,
+                            count > 2 ? "Some shares were not deleted from list" : "Share was not deleted from list");
                 }
 
+                return;
+            }
+
+
+            if (userMessWord[0] == "/start_checking")
+            {
+                bot = sender as TelegramBotClient;
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, "Start checking shares from the list");
+                Start_Checking(sender, e);
+                return;
+            }
+
+            if (userMessWord[0] == "/stop_checking")
+            {
+                bot = sender as TelegramBotClient;
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, "Checking shares from the list was stopped");
+                _sTimer.Enabled = false;
                 return;
             }
 
@@ -138,7 +170,7 @@ namespace lab4
         }
 
         private static void Share_Info(object sender, MessageEventArgs e, int messType = Constants.ExtendedMess,
-            string shareCode = null, int cost = 0)
+            string shareCode = null, Share share = null)
         {
             var bot = sender as TelegramBotClient;
             var url = "https://finance.yahoo.com/quote/";
@@ -201,6 +233,25 @@ namespace lab4
                 return;
             }
 
+            if (messType == Constants.EventMess)
+            {
+                CultureInfo temp_culture = Thread.CurrentThread.CurrentCulture;
+                Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
+                if (share.Cost == 0)
+                {
+                    share.Cost = double.Parse(sharesCost);
+                }
+                var costDif = (share.Cost - double.Parse(sharesCost)).ToString();
+
+                var EventMess = shareName + '\n' + sharesCost + ' ' + shareVal + '\n'
+                                        + "Cost difference:" + costDif;
+
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, EventMess);
+                Console.WriteLine(response);
+                Thread.CurrentThread.CurrentCulture = temp_culture;
+                return;
+            }
+
 
             if (messType == Constants.ExtendedMess)  //exiting from method for extended message
             {
@@ -212,9 +263,11 @@ namespace lab4
 
         private static bool Add_Share(string shareCode)
         {
-            _sharesQuant += 1;
             _addedShares.Add(new Share());
             _addedShares[_sharesQuant].Name = shareCode;
+            _addedShares[_sharesQuant].Cost = 0;
+            _sharesQuant += 1;
+            _addedShares = _addedShares.ToList();
             return true;
         }
 
@@ -230,8 +283,10 @@ namespace lab4
         {
             foreach (var share in _addedShares.ToList())
                 if (share.Name == shareCode)
+                {
                     _addedShares.Remove(share);
-            _sharesQuant -= 1;
+                    _sharesQuant -= 1;
+                }
             return true;
         }
 
@@ -251,11 +306,25 @@ namespace lab4
             return _sharesQuant != -1;
         }
 
+        private static void Start_Checking(object sender, MessageEventArgs e)
+        {
+            _sTimer.Enabled = true;
+            _sTimer.Elapsed += (tSender, tE) =>
+            {
+                foreach (var share in _addedShares.ToList())
+                {
+                    Share_Info(sender, e, Constants.EventMess, share.Name, share);
+                }
+                
+            };
+        }
+
+
         private class Share
         {
             public string Name { get; set; }
 
-            public int Cost { get; set; }
+            public double Cost { get; set; }
         }
     }
 }
