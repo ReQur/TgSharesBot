@@ -7,10 +7,19 @@ using HtmlAgilityPack;
 using Telegram.Bot;
 using Telegram.Bot.Args;
 
+
 namespace lab4
 {
     internal class Program
     {
+        public static class Constants
+        {
+            public const int ShortMess = 1;
+            public const int ExtendedMess = 2;
+            public const int NullMess = 0;
+
+        }
+
         private const string HelpDesk = "\t/share *name of share* - returns extended information about the share\n" +
                                         "\t/add *name of share* [*name of share*...] - adds one or several shares in list\n" +
                                         "\t/list shows you all short information about all shares in list\n" +
@@ -132,7 +141,7 @@ namespace lab4
             bot.SendTextMessageAsync(e.Message.Chat.Id, "Wrong Command");
         }
 
-        private static void Share_Info(object sender, MessageEventArgs e, bool shortmess = false,
+        private static void Share_Info(object sender, MessageEventArgs e, int messType = Constants.ExtendedMess,
             string ShareCode = null, int cost = 0)
         {
             var bot = sender as TelegramBotClient;
@@ -200,7 +209,7 @@ namespace lab4
                            SharePlat[SharePlat.Length - 2].ToString() + SharePlat[SharePlat.Length - 1];
 
 
-            if (shortmess)
+            if (messType == Constants.ShortMess)
             {
                 var shortMess = ShareName + '\n' + SharesCost + ' ' + ShareVal;
                 bot.SendTextMessageAsync(e.Message.Chat.Id, shortMess);
@@ -208,10 +217,13 @@ namespace lab4
                 return;
             }
 
-
-            var Mess = ShareName + '\n' + SharesCost + ' ' + ShareVal;
-            bot.SendTextMessageAsync(e.Message.Chat.Id, Mess);
-            Console.WriteLine(response);
+            if (messType == Constants.ExtendedMess)
+            {
+                var Mess = ShareName + '\n' + SharesCost + ' ' + ShareVal;
+                bot.SendTextMessageAsync(e.Message.Chat.Id, Mess);
+                Console.WriteLine(response);
+                return;
+            }
         }
 
         private static bool Add_Share(string ShareCode)
@@ -250,7 +262,7 @@ namespace lab4
 
         private static bool List_Share(object sender, MessageEventArgs e)
         {
-            foreach (var share in AddedShares) Share_Info(sender, e, true, share.Name);
+            foreach (var share in AddedShares) Share_Info(sender, e, 1, share.Name);
 
             return SharesQuant != -1;
         }
