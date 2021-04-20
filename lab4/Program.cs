@@ -15,6 +15,7 @@ namespace lab4
     internal class Program
     {
         private static System.Timers.Timer _sTimer;
+        private static double checkInterval;
         public static class Constants
         {
             public const int ShortMess = 1;
@@ -29,13 +30,15 @@ namespace lab4
                                         "\t/delete *name of share* [*name of share*...] - deletes one or several shares from list\n" +
                                         "\t/delete &all - clean list of shares\n" +
                                         "\t/start_checking - starts send shares info non-stop\n" +
-                                        "\t/stop_checking - stops send shares info";
+                                        "\t/stop_checking - stops send shares info\n" +
+                                        "\t/set_interval - setting requesting interval";
 
         private static List<Share> _addedShares = new List<Share>();
         private static int _sharesQuant = 0;
 
         private static void Main()
         {
+
             var unused = new HtmlWeb
             {
                 PreRequest = OnPreRequest
@@ -55,7 +58,7 @@ namespace lab4
 
         private static void SetTimer()
         {
-            _sTimer = new System.Timers.Timer(15000) {AutoReset = true, Enabled = false};
+            _sTimer = new System.Timers.Timer(5*60*1000) {AutoReset = true, Enabled = false};
         }
 
         private static bool OnPreRequest(HttpWebRequest request)
@@ -164,6 +167,20 @@ namespace lab4
                 return;
             }
 
+            if (userMessWord[0] == "/set_interval")
+            {
+                CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
+                Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
+
+                checkInterval = double.Parse(userMessWord[1]);
+                _sTimer.Interval = checkInterval * 60 * 1000;
+                bot = sender as TelegramBotClient;
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, "Checking interval set to " + checkInterval + " mins");
+
+                Thread.CurrentThread.CurrentCulture = tempCulture; 
+                return;
+            }
+
             bot?.SendTextMessageAsync(e.Message.Chat.Id, "Wrong Command");
         }
 
@@ -239,12 +256,12 @@ namespace lab4
                 Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
                 if (share.Cost == 0)
                 {
-                    share.Cost = double.Parse(sharesCost);
+                    share.Cost = double.Parse(sharesCost[Range.EndAt(4)]);
                 }
-                var costDif = (share.Cost - double.Parse(sharesCost)).ToString();
+                var costDif = (share.Cost - double.Parse(sharesCost[Range.EndAt(4)])).ToString();
 
                 var EventMess = shareName + '\n' + sharesCost + ' ' + shareVal + '\n'
-                                        + "Cost difference:" + costDif;
+                                        + "Cost difference:" + costDif[Range.EndAt(4)] + ' ' + shareVal;
 
                 bot?.SendTextMessageAsync(e.Message.Chat.Id, EventMess);
                 Console.WriteLine(response);
@@ -262,14 +279,18 @@ namespace lab4
                                 (x.Attributes["data-reactid"].Value == "44" ||
                                  x.Attributes["data-reactid"].Value == "49")).ToList();
 
-                descHtml = elements2.SelectMany(x => x.Descendants("span"))
-                    .Where(x => x.Attributes["class"] != null)
-                    .FirstOrDefault(x => x.Attributes["data-reactid"].Value == "44");
+                //descHtml = elements2.SelectMany(x => x.Descendants("span"))
+                //    .Where(x => x.Attributes["data-reactid"] != null)
+                //    .FirstOrDefault(x => x.Attributes["data-reactid"].Value == "44");
+
+                descHtml = elements2[0];
                 var prevClose = descHtml.InnerText;
 
-                descHtml = elements2.SelectMany(x => x.Descendants("span"))
-                    .Where(x => x.Attributes["class"] != null)
-                    .FirstOrDefault(x => x.Attributes["data-reactid"].Value == "49");
+                //descHtml = elements2.SelectMany(x => x.Descendants("span"))
+                //    .Where(x => x.Attributes["class"] != null)
+                //    .FirstOrDefault(x => x.Attributes["data-reactid"].Value == "49");
+
+                descHtml = elements2[1];
                 var Opened = descHtml.InnerText;
 
 
