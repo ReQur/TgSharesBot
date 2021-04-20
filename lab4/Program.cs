@@ -55,9 +55,7 @@ namespace lab4
 
         private static void SetTimer()
         {
-            _sTimer = new System.Timers.Timer(15000);
-            _sTimer.AutoReset = true;
-            _sTimer.Enabled = false;
+            _sTimer = new System.Timers.Timer(15000) {AutoReset = true, Enabled = false};
         }
 
         private static bool OnPreRequest(HttpWebRequest request)
@@ -197,6 +195,8 @@ namespace lab4
                 .Where(x => x.Attributes["class"].Value == "D(ib) Mend(20px)" ||
                             x.Attributes["class"].Value == "D(ib) " ||
                             x.Attributes["class"].Value == "C($tertiaryColor) Fz(12px)").ToList();
+
+
             if (elements.Count == 0)
             {
                 bot?.SendTextMessageAsync(e.Message.Chat.Id, "Wrong share name");
@@ -235,7 +235,7 @@ namespace lab4
 
             if (messType == Constants.EventMess)
             {
-                CultureInfo temp_culture = Thread.CurrentThread.CurrentCulture;
+                CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
                 if (share.Cost == 0)
                 {
@@ -248,14 +248,34 @@ namespace lab4
 
                 bot?.SendTextMessageAsync(e.Message.Chat.Id, EventMess);
                 Console.WriteLine(response);
-                Thread.CurrentThread.CurrentCulture = temp_culture;
+                Thread.CurrentThread.CurrentCulture = tempCulture;
                 return;
             }
 
 
+
             if (messType == Constants.ExtendedMess)  //exiting from method for extended message
             {
-                var mess = shareName + '\n' + sharesCost + ' ' + shareVal;
+                var elements2 = doc.DocumentNode.Descendants("span")
+                    .Where(x => x.Attributes["class"] != null)
+                    .Where(x => x.Attributes["class"].Value == "Trsdu(0.3s) " &&
+                                (x.Attributes["data-reactid"].Value == "44" ||
+                                 x.Attributes["data-reactid"].Value == "49")).ToList();
+
+                descHtml = elements2.SelectMany(x => x.Descendants("span"))
+                    .Where(x => x.Attributes["class"] != null)
+                    .FirstOrDefault(x => x.Attributes["data-reactid"].Value == "44");
+                var prevClose = descHtml.InnerText;
+
+                descHtml = elements2.SelectMany(x => x.Descendants("span"))
+                    .Where(x => x.Attributes["class"] != null)
+                    .FirstOrDefault(x => x.Attributes["data-reactid"].Value == "49");
+                var Opened = descHtml.InnerText;
+
+
+                var mess = shareName + '\n' + sharesCost + ' ' + shareVal + '\n'
+                    + "Previous close " + prevClose + ' ' + shareVal + '\n'
+                    + "Open " + Opened + ' ' + shareVal;
                 bot?.SendTextMessageAsync(e.Message.Chat.Id, mess);
                 Console.WriteLine(response);
             }
