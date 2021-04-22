@@ -20,7 +20,7 @@ namespace lab4
         private static List<Share> _addedShares = new List<Share>();
         private static int _sharesQuant;
 
-        public class CommandFactory
+        private class CommandFactory
         {
             public static Command Get(string message)
             {
@@ -30,7 +30,7 @@ namespace lab4
                     "/add" => new AddCommand(),
                     "/list" => new ListCommand(),
                     "/help" => new HelpCommand(),
-                    "/delete" => new DeleteCommad(),
+                    "/delete" => new DeleteCommand(),
                     "/start_checking" => new StartCheckingCommand(),
                     "/stop_checking" => new StopCheckingCommand(),
                     "/set_interval" => new SetIntervalCommand(),
@@ -38,19 +38,22 @@ namespace lab4
                 };
             }
         }
-        public abstract class Command
+
+        private abstract class Command
         {
             public abstract void Process(TelegramBotClient botclient, MessageEventArgs eventArgs);
             
         }
-        public class ShareCommand : Command
+
+        private class ShareCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 Share_Info(botclient, eventArgs);
             }
         }
-        public class AddCommand : Command
+
+        private class AddCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
@@ -70,28 +73,25 @@ namespace lab4
                 }
             }
         }
-        public class ListCommand : Command
+
+        private class ListCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
-                if (List_Share(botclient, eventArgs))
-                {
-                    botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "All shares was showed");
-                }
-                else
-                {
-                    botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Nothing to show");
-                }
+                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
+                    List_Share(botclient, eventArgs) ? "All shares was showed" : "Nothing to show");
             }
         }
-        public class HelpCommand : Command
+
+        private class HelpCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 botclient.SendTextMessageAsync(eventArgs.Message.Chat.Id, Constants.HelpDesk);
             }
         }
-        public class DeleteCommad : Command
+
+        private class DeleteCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
@@ -115,7 +115,8 @@ namespace lab4
                 }
             }
         }
-        public class StartCheckingCommand : Command
+
+        private class StartCheckingCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
@@ -123,7 +124,8 @@ namespace lab4
                 Start_Checking(botclient, eventArgs);
             }
         }
-        public class StopCheckingCommand : Command
+
+        private class StopCheckingCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
@@ -131,7 +133,8 @@ namespace lab4
                 _sTimer.Enabled = false;
             }
         }
-        public class SetIntervalCommand : Command
+
+        private class SetIntervalCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
@@ -147,7 +150,8 @@ namespace lab4
                 Thread.CurrentThread.CurrentCulture = tempCulture;
             }
         }
-        public class WrongCommand : Command
+
+        private class WrongCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
@@ -375,7 +379,7 @@ namespace lab4
             public double Cost { get; set; }
         }
 
-        public static class Constants
+        private static class Constants
         {
             public const int ShortMess = 1;
             public const int ExtendedMess = 2;
