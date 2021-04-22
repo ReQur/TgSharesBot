@@ -35,22 +35,20 @@ namespace lab4
         {
             public static Command Get(string message)
             {
-
-                switch (message)
+                return message switch
                 {
-                    case "/share": return new ShareComand();
-                    case "/add": return new AddComand();
-                    case "/list": return new ListCommand(); 
-                    case "/help": return new HelpCommand();
-                    case "/delete": return new DeleteCommad();
-                    case "/start_checking": return new StartCheckingCommand();
-                    case "/stop_checking": return new StopCheckingCommand();
-                    case "/set_interval": return new SetIntervalCommand();
-                }
-                return new WrongCommand();
+                    "/share" => new ShareComand(),
+                    "/add" => new AddComand(),
+                    "/list" => new ListCommand(),
+                    "/help" => new HelpCommand(),
+                    "/delete" => new DeleteCommad(),
+                    "/start_checking" => new StartCheckingCommand(),
+                    "/stop_checking" => new StopCheckingCommand(),
+                    "/set_interval" => new SetIntervalCommand(),
+                    _ => new WrongCommand()
+                };
             }
         }
-
         public abstract class Command
         {
             public abstract void Process(TelegramBotClient botclient, MessageEventArgs eventArgs);
