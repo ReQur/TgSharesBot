@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -17,7 +15,7 @@ namespace lab4
     internal class Program
     {
         private static System.Timers.Timer _sTimer;
-        private static double checkInterval = Constants.TInterval5Min;
+        private static double _checkInterval = Constants.Interval5Min;
 
         private const string HelpDesk = "\t/share *name of share* - returns extended information about the share\n" +
                                         "\t/add *name of share* [*name of share*...] - adds one or several shares in list\n" +
@@ -29,7 +27,7 @@ namespace lab4
                                         "\t/set_interval - setting requesting interval";
 
         private static List<Share> _addedShares = new List<Share>();
-        private static int _sharesQuant = 0;
+        private static int _sharesQuant;
 
         public class CommandFactory
         {
@@ -37,8 +35,8 @@ namespace lab4
             {
                 return message switch
                 {
-                    "/share" => new ShareComand(),
-                    "/add" => new AddComand(),
+                    "/share" => new ShareCommand(),
+                    "/add" => new AddCommand(),
                     "/list" => new ListCommand(),
                     "/help" => new HelpCommand(),
                     "/delete" => new DeleteCommad(),
@@ -53,14 +51,14 @@ namespace lab4
         {
             public abstract void Process(TelegramBotClient botclient, MessageEventArgs eventArgs);
         }
-        public class ShareComand : Command
+        public class ShareCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 Share_Info(botclient, eventArgs);
             }
         }
-        public class AddComand : Command
+        public class AddCommand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
@@ -150,9 +148,9 @@ namespace lab4
                 CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
 
-                checkInterval = double.Parse(userMessWord[1]);
-                _sTimer.Interval = checkInterval * 60 * 1000;
-                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking interval set to " + checkInterval + " mins");
+                _checkInterval = double.Parse(userMessWord[1]);
+                _sTimer.Interval = _checkInterval * 60 * 1000;
+                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking interval set to " + _checkInterval + " mins");
 
                 Thread.CurrentThread.CurrentCulture = tempCulture;
             }
@@ -189,7 +187,7 @@ namespace lab4
 
         private static void SetTimer()
         {
-            _sTimer = new System.Timers.Timer(Constants.TInterval5Min) {AutoReset = true, Enabled = false};
+            _sTimer = new System.Timers.Timer(Constants.Interval5Min) {AutoReset = true, Enabled = false};
         }
 
         private static bool OnPreRequest(HttpWebRequest request)
@@ -217,7 +215,7 @@ namespace lab4
             var userMessWord = e.Message.Text.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
             var count = userMessWord.Length;
 
-            if (shareCode == null) shareCode = (count > 1) ? userMessWord[1] : userMessWord[0];
+            if (shareCode == null) shareCode = count > 1 ? userMessWord[1] : userMessWord[0];
 
             url = url + shareCode + '/';
 
@@ -279,16 +277,16 @@ namespace lab4
             {
                 CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
-                if (share.Cost == 0)
+                if (share?.Cost == 0)
                 {
-                    share.Cost = double.Parse(sharesCost[Range.EndAt(4)]);
+                    share.Cost = double.Parse(sharesCost?[Range.EndAt(4)]);
                 }
-                var costDif = (share.Cost - double.Parse(sharesCost[Range.EndAt(4)])).ToString();
+                var costDif = (share.Cost - double.Parse(sharesCost?[Range.EndAt(4)])).ToString(CultureInfo.InvariantCulture);
 
-                var EventMess = shareName + '\n' + sharesCost + ' ' + shareVal + '\n'
+                var eventMess = shareName + '\n' + sharesCost + ' ' + shareVal + '\n'
                                         + "Cost difference:" + costDif[Range.EndAt(4)] + ' ' + shareVal;
 
-                bot?.SendTextMessageAsync(e.Message.Chat.Id, EventMess);
+                bot?.SendTextMessageAsync(e.Message.Chat.Id, eventMess);
                 Console.WriteLine(response);
                 Thread.CurrentThread.CurrentCulture = tempCulture;
                 return;
@@ -304,24 +302,16 @@ namespace lab4
                                 (x.Attributes["data-reactid"].Value == "44" ||
                                  x.Attributes["data-reactid"].Value == "49")).ToList();
 
-                //descHtml = elements2.SelectMany(x => x.Descendants("span"))
-                //    .Where(x => x.Attributes["data-reactid"] != null)
-                //    .FirstOrDefault(x => x.Attributes["data-reactid"].Value == "44");
-
                 descHtml = elements2[0];
                 var prevClose = descHtml.InnerText;
 
-                //descHtml = elements2.SelectMany(x => x.Descendants("span"))
-                //    .Where(x => x.Attributes["class"] != null)
-                //    .FirstOrDefault(x => x.Attributes["data-reactid"].Value == "49");
-
                 descHtml = elements2[1];
-                var Opened = descHtml.InnerText;
+                var opened = descHtml.InnerText;
 
 
                 var mess = shareName + '\n' + sharesCost + ' ' + shareVal + '\n'
                     + "Previous close " + prevClose + ' ' + shareVal + '\n'
-                    + "Open " + Opened + ' ' + shareVal;
+                    + "Open " + opened + ' ' + shareVal;
                 bot?.SendTextMessageAsync(e.Message.Chat.Id, mess);
                 Console.WriteLine(response);
             }
@@ -398,7 +388,7 @@ namespace lab4
             public const int ShortMess = 1;
             public const int ExtendedMess = 2;
             public const int EventMess = 0;
-            public const int TInterval5Min = 30000;
+            public const int Interval5Min = 30000;
 
         }
     }
