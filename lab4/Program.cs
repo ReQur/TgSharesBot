@@ -35,8 +35,19 @@ namespace lab4
         {
             public static Command Get(string message)
             {
-                if (message == "/share") return new ShareComand();
-                return null;
+
+                switch (message)
+                {
+                    case "/share": return new ShareComand();
+                    case "/add": return new AddComand();
+                    case "/list": return new ListCommand(); 
+                    case "/help": return new HelpCommand();
+                    case "/delete": return new DeleteCommad();
+                    case "/start_checking": return new StartCheckingCommand();
+                    case "/stop_checking": return new StopCheckingCommand();
+                    case "/set_interval": return new SetIntervalCommand();
+                }
+                return new WrongCommand();
             }
         }
 
@@ -44,7 +55,6 @@ namespace lab4
         {
             public abstract void Process(TelegramBotClient botclient, MessageEventArgs eventArgs);
         }
-
         public class ShareComand : Command
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
@@ -72,6 +82,92 @@ namespace lab4
                 }
             }
         }
+        public class ListCommand : Command
+        {
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            {
+                if (List_Share(botclient, eventArgs))
+                {
+                    botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "All shares was showed");
+                }
+                else
+                {
+                    botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Nothing to show");
+                }
+            }
+        }
+        public class HelpCommand : Command
+        {
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            {
+                botclient.SendTextMessageAsync(eventArgs.Message.Chat.Id, HelpDesk);
+            }
+        }
+        public class DeleteCommad : Command
+        {
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            {
+                var userMess = eventArgs.Message.Text;
+                var userMessWord = userMess.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                var count = userMessWord.Length;
+                if (userMessWord[1] == "&all")
+                {
+                    _addedShares.RemoveRange(0, _sharesQuant + 1);
+                    _sharesQuant = 0;
+                    botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "All shares were deleted from list");
+                }
+                else
+                {
+                    if (Del_Several_Shares(userMessWord))
+                        botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
+                            count > 2 ? "Shares were deleted from list" : "Share was deleted from list");
+                    else
+                        botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
+                            count > 2 ? "Some shares were not deleted from list" : "Share was not deleted from list");
+                }
+            }
+        }
+        public class StartCheckingCommand : Command
+        {
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            {
+                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Start checking shares from the list");
+                Start_Checking(botclient, eventArgs);
+            }
+        }
+        public class StopCheckingCommand : Command
+        {
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            {
+                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking shares from the list was stopped");
+                _sTimer.Enabled = false;
+            }
+        }
+        public class SetIntervalCommand : Command
+        {
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            {
+                var userMess = eventArgs.Message.Text;
+                var userMessWord = userMess.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
+                Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
+
+                checkInterval = double.Parse(userMessWord[1]);
+                _sTimer.Interval = checkInterval * 60 * 1000;
+                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking interval set to " + checkInterval + " mins");
+
+                Thread.CurrentThread.CurrentCulture = tempCulture;
+            }
+        }
+        public class WrongCommand : Command
+        {
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            {
+                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Wrong Command");
+            }
+        }
+
+
 
         private static void Main()
         {
@@ -111,116 +207,8 @@ namespace lab4
             var userMessWord = e.Message.Text.Split(new[] { " " },
                                             StringSplitOptions.RemoveEmptyEntries);
 
-
             var command = CommandFactory.Get(userMessWord[0]);
             command.Process(bot, e);
-
-            //if (count == 1 && userMessWord[0][0] != '/' || userMessWord[0] == "/share")
-            //{
-            //    Share_Info(sender, e);
-            //    return;
-            //}
-
-
-            //if (userMessWord[0] == "/list")
-            //{
-            //    if (List_Share(sender, e))
-            //    {
-            //        bot = sender as TelegramBotClient;
-            //        bot?.SendTextMessageAsync(e.Message.Chat.Id, "All shares was showed");
-            //    }
-            //    else
-            //    {
-            //        bot = sender as TelegramBotClient;
-            //        bot?.SendTextMessageAsync(e.Message.Chat.Id, "Nothing to show");
-            //    }
-
-            //    return;
-            //}
-
-
-            //if (userMessWord[0] == "/add")
-            //{
-            //    if (Add_Several_Shares(userMessWord))
-            //    {
-            //        bot = sender as TelegramBotClient;
-            //        bot?.SendTextMessageAsync(e.Message.Chat.Id,
-            //            count > 3 ? "All shares were added in list" : "Share Added in list");
-            //    }
-            //    else
-            //    {
-            //        bot = sender as TelegramBotClient;
-            //        bot?.SendTextMessageAsync(e.Message.Chat.Id,
-            //            count > 3 ? "Some shares weren't added in list" : "Share was not added in list");
-            //    }
-
-            //    return;
-            //}
-
-
-            //if (userMessWord[0] == "/help")
-            //{
-            //    bot = sender as TelegramBotClient;
-            //    bot?.SendTextMessageAsync(e.Message.Chat.Id, HelpDesk);
-            //    return;
-            //}
-
-
-            //if (userMessWord[0] == "/delete")
-            //{
-            //    if (userMessWord[1] == "&all")
-            //    {
-            //        _addedShares.RemoveRange(0, _sharesQuant + 1);
-            //        _sharesQuant = 0;
-            //        bot = sender as TelegramBotClient;
-            //        bot?.SendTextMessageAsync(e.Message.Chat.Id, "All shares were deleted from list");
-            //    }
-            //    else
-            //    {
-            //        bot = sender as TelegramBotClient;
-            //        if (Del_Several_Shares(userMessWord))
-            //            bot?.SendTextMessageAsync(e.Message.Chat.Id,
-            //                count > 2 ? "Shares were deleted from list" : "Share was deleted from list");
-            //        else
-            //            bot?.SendTextMessageAsync(e.Message.Chat.Id,
-            //                count > 2 ? "Some shares were not deleted from list" : "Share was not deleted from list");
-            //    }
-
-            //    return;
-            //}
-
-
-            //if (userMessWord[0] == "/start_checking")
-            //{
-            //    bot = sender as TelegramBotClient;
-            //    bot?.SendTextMessageAsync(e.Message.Chat.Id, "Start checking shares from the list");
-            //    Start_Checking(sender, e);
-            //    return;
-            //}
-
-            //if (userMessWord[0] == "/stop_checking")
-            //{
-            //    bot = sender as TelegramBotClient;
-            //    bot?.SendTextMessageAsync(e.Message.Chat.Id, "Checking shares from the list was stopped");
-            //    _sTimer.Enabled = false;
-            //    return;
-            //}
-
-            //if (userMessWord[0] == "/set_interval")
-            //{
-            //    CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
-            //    Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
-
-            //    checkInterval = double.Parse(userMessWord[1]);
-            //    _sTimer.Interval = checkInterval * 60 * 1000;
-            //    bot = sender as TelegramBotClient;
-            //    bot?.SendTextMessageAsync(e.Message.Chat.Id, "Checking interval set to " + checkInterval + " mins");
-
-            //    Thread.CurrentThread.CurrentCulture = tempCulture; 
-            //    return;
-            //}
-
-            bot?.SendTextMessageAsync(e.Message.Chat.Id, "Wrong Command");
         }
 
         private static void Share_Info(object sender, MessageEventArgs e, int messType = Constants.ExtendedMess,
