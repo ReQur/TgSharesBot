@@ -17,15 +17,6 @@ namespace lab4
         private static System.Timers.Timer _sTimer;
         private static double _checkInterval = Constants.Interval5Min;
 
-        private const string HelpDesk = "\t/share *name of share* - returns extended information about the share\n" +
-                                        "\t/add *name of share* [*name of share*...] - adds one or several shares in list\n" +
-                                        "\t/list shows you all short information about all shares in list\n" +
-                                        "\t/delete *name of share* [*name of share*...] - deletes one or several shares from list\n" +
-                                        "\t/delete &all - clean list of shares\n" +
-                                        "\t/start_checking - starts send shares info non-stop\n" +
-                                        "\t/stop_checking - stops send shares info\n" +
-                                        "\t/set_interval - setting requesting interval";
-
         private static List<Share> _addedShares = new List<Share>();
         private static int _sharesQuant;
 
@@ -50,6 +41,7 @@ namespace lab4
         public abstract class Command
         {
             public abstract void Process(TelegramBotClient botclient, MessageEventArgs eventArgs);
+            
         }
         public class ShareCommand : Command
         {
@@ -69,12 +61,12 @@ namespace lab4
                 {
                     
                     botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
-                        count > 3 ? "All shares were added in list" : "Share Added in list");
+                        count > 2 ? "All shares were added in list" : "Share Added in list");
                 }
                 else
                 {
                     botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
-                        count > 3 ? "Some shares weren't added in list" : "Share was not added in list");
+                        count > 2 ? "Some shares weren't added in list" : "Share was not added in list");
                 }
             }
         }
@@ -96,7 +88,7 @@ namespace lab4
         {
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
-                botclient.SendTextMessageAsync(eventArgs.Message.Chat.Id, HelpDesk);
+                botclient.SendTextMessageAsync(eventArgs.Message.Chat.Id, Constants.HelpDesk);
             }
         }
         public class DeleteCommad : Command
@@ -389,6 +381,14 @@ namespace lab4
             public const int ExtendedMess = 2;
             public const int EventMess = 0;
             public const int Interval5Min = 30000;
+            public const string HelpDesk = "\t/share *name of share* - returns extended information about the share\n" +
+                                            "\t/add *name of share* [*name of share*...] - adds one or several shares in list\n" +
+                                            "\t/list shows you all short information about all shares in list\n" +
+                                            "\t/delete *name of share* [*name of share*...] - deletes one or several shares from list\n" +
+                                            "\t/delete &all - clean list of shares\n" +
+                                            "\t/start_checking - starts send shares info non-stop\n" +
+                                            "\t/stop_checking - stops send shares info\n" +
+                                            "\t/set_interval - setting requesting interval";
 
         }
     }
