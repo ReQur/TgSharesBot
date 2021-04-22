@@ -16,13 +16,6 @@ namespace lab4
     {
         private static System.Timers.Timer _sTimer;
         private static double checkInterval;
-        public static class Constants
-        {
-            public const int ShortMess = 1;
-            public const int ExtendedMess = 2;
-            public const int EventMess = 0;
-
-        }
 
         private const string HelpDesk = "\t/share *name of share* - returns extended information about the share\n" +
                                         "\t/add *name of share* [*name of share*...] - adds one or several shares in list\n" +
@@ -58,7 +51,7 @@ namespace lab4
 
         private static void SetTimer()
         {
-            _sTimer = new System.Timers.Timer(5*60*1000) {AutoReset = true, Enabled = false};
+            _sTimer = new System.Timers.Timer(Constants.TInterval5Min) {AutoReset = true, Enabled = false};
         }
 
         private static bool OnPreRequest(HttpWebRequest request)
@@ -366,6 +359,15 @@ namespace lab4
             public string Name { get; set; }
 
             public double Cost { get; set; }
+        }
+
+        public static class Constants
+        {
+            public const int ShortMess = 1;
+            public const int ExtendedMess = 2;
+            public const int EventMess = 0;
+            public const int TInterval5Min = 30000;
+
         }
     }
 }
