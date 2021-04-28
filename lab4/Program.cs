@@ -175,8 +175,8 @@ namespace lab4
                 var count = userMessWord.Length;
                 if (userMessWord[1] == "&all")
                 {
-                    _users[eventArgs].AddedShares.RemoveRange(0, _users[eventArgs].SharesQuant);
-                    _users[eventArgs].SharesQuant = 0;
+                    _users[eventArgs.Message.Chat.Id].AddedShares.RemoveRange(0, _users[eventArgs.Message.Chat.Id].SharesQuant);
+                    _users[eventArgs.Message.Chat.Id].SharesQuant = 0;
                     botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "All shares were deleted from list");
                 }
                 else
@@ -215,7 +215,7 @@ namespace lab4
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking shares from the list was stopped");
-                _users[eventArgs].STimer.Enabled = false;
+                _users[eventArgs.Message.Chat.Id].STimer.Enabled = false;
             }
 
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
@@ -239,10 +239,10 @@ namespace lab4
                 CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
 
-                _users[eventArgs].CheckInterval = double.Parse(userMessWord[1]);
-                _users[eventArgs].STimer.Interval = _users[eventArgs].CheckInterval * 60 * 1000;
+                _users[eventArgs.Message.Chat.Id].CheckInterval = double.Parse(userMessWord[1]);
+                _users[eventArgs.Message.Chat.Id].STimer.Interval = _users[eventArgs.Message.Chat.Id].CheckInterval * 60 * 1000;
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
-                    "Checking interval set to " + _users[eventArgs].CheckInterval + " mins");
+                    "Checking interval set to " + _users[eventArgs.Message.Chat.Id].CheckInterval + " mins");
 
                 Thread.CurrentThread.CurrentCulture = tempCulture;
             }
@@ -286,7 +286,7 @@ namespace lab4
         
         private static void SetTimer(MessageEventArgs e)
         {
-            _users[e].STimer = new Timer(Constants.Interval5Min) {AutoReset = true, Enabled = false};
+            _users[e.Message.Chat.Id].STimer = new Timer(Constants.Interval5Min) {AutoReset = true, Enabled = false};
         }
 
         private static bool OnPreRequest(HttpWebRequest request)
@@ -297,9 +297,9 @@ namespace lab4
 
         private static void Add_User(MessageEventArgs e)
         {
-            if (_users.ContainsKey(e) == false)
+            if (_users.ContainsKey(e.Message.Chat.Id) == false)
             {
-                _users.Add(e, new User());
+                _users.Add(e.Message.Chat.Id, new User());
                 SetTimer(e);
             }
         }
@@ -346,11 +346,11 @@ namespace lab4
 
         private static bool Add_Share(string shareCode, MessageEventArgs e)
         {
-            _users[e].AddedShares.Add(new Share());
-            _users[e].AddedShares[_users[e].SharesQuant].Name = shareCode;
-            _users[e].AddedShares[_users[e].SharesQuant].Cost = null;
-            _users[e].SharesQuant += 1;
-            _users[e].AddedShares = _users[e].AddedShares.ToList();
+            _users[e.Message.Chat.Id].AddedShares.Add(new Share());
+            _users[e.Message.Chat.Id].AddedShares[_users[e.Message.Chat.Id].SharesQuant].Name = shareCode;
+            _users[e.Message.Chat.Id].AddedShares[_users[e.Message.Chat.Id].SharesQuant].Cost = null;
+            _users[e.Message.Chat.Id].SharesQuant += 1;
+            _users[e.Message.Chat.Id].AddedShares = _users[e.Message.Chat.Id].AddedShares.ToList();
             return true;
         }
 
@@ -364,11 +364,11 @@ namespace lab4
 
         private static bool Del_Share(string shareCode, MessageEventArgs e)
         {
-            foreach (var share in _users[e].AddedShares.ToList())
+            foreach (var share in _users[e.Message.Chat.Id].AddedShares.ToList())
                 if (share.Name == shareCode)
                 {
-                    _users[e].AddedShares.Remove(share);
-                    _users[e].SharesQuant -= 1;
+                    _users[e.Message.Chat.Id].AddedShares.Remove(share);
+                    _users[e.Message.Chat.Id].SharesQuant -= 1;
                 }
 
             return true;
@@ -379,23 +379,23 @@ namespace lab4
             for (var i = 1; i < shareCodes.Length; i += 1)
                 if (!Del_Share(shareCodes[i], e))
                     return false;
-            _users[e].AddedShares = _users[e].AddedShares.ToList();
+            _users[e.Message.Chat.Id].AddedShares = _users[e.Message.Chat.Id].AddedShares.ToList();
             return true;
         }
 
         private static bool List_Share(TelegramBotClient sender, MessageEventArgs e)
         {
-            foreach (var share in _users[e].AddedShares) Share_Info(sender, e, Constants.ShortMess, share.Name);
+            foreach (var share in _users[e.Message.Chat.Id].AddedShares) Share_Info(sender, e, Constants.ShortMess, share.Name);
 
-            return _users[e].SharesQuant != -1;
+            return _users[e.Message.Chat.Id].SharesQuant != -1;
         }
 
         private static void Start_Checking(TelegramBotClient bot, MessageEventArgs e)
         {
-            _users[e].STimer.Enabled = true;
-            _users[e].STimer.Elapsed += (tSender, tE) =>
+            _users[e.Message.Chat.Id].STimer.Enabled = true;
+            _users[e.Message.Chat.Id].STimer.Elapsed += (tSender, tE) =>
             {
-                foreach (var share in _users[e].AddedShares.ToList())
+                foreach (var share in _users[e.Message.Chat.Id].AddedShares.ToList())
                 {
                     Share_Info(bot, e, Constants.EventMess, share.Name, share);
                 }
@@ -504,7 +504,7 @@ namespace lab4
 
         }
 
-        private static Dictionary<MessageEventArgs, User> _users = new Dictionary<MessageEventArgs, User> ();
+        private static Dictionary<long, User> _users = new Dictionary<long, User> ();
 
     private class User
         {
