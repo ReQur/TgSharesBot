@@ -299,7 +299,6 @@ namespace lab4
             return true;
         }
 
-
         private static void Bot_OnMessage(object sender, MessageEventArgs e)
         {
             var bot = sender as TelegramBotClient;
@@ -495,6 +494,9 @@ namespace lab4
 
 
         }
+
+
+        
 
         private static class Constants
         {
