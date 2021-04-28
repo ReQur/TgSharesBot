@@ -33,7 +33,7 @@ namespace lab4
                 };
             }
 
-            public  static Command Get(int messageType)
+            public static Command Get(int messageType)
             {
                 return messageType switch
                 {
@@ -103,7 +103,7 @@ namespace lab4
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 var userMess = eventArgs.Message.Text;
-                var userMessWord = userMess.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                var userMessWord = userMess.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
                 Share_Info(botclient, eventArgs, Constants.ExtendedMess, userMessWord[1]);
             }
 
@@ -118,11 +118,11 @@ namespace lab4
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 var userMess = eventArgs.Message.Text;
-                var userMessWord = userMess.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                var userMessWord = userMess.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
                 var count = userMessWord.Length;
-                if (Add_Several_Shares(userMessWord))
+                if (Add_Several_Shares(userMessWord, eventArgs))
                 {
-                    
+
                     botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
                         count > 2 ? "All shares were added in list" : "Share Added in list");
                 }
@@ -171,17 +171,17 @@ namespace lab4
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 var userMess = eventArgs.Message.Text;
-                var userMessWord = userMess.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                var userMessWord = userMess.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
                 var count = userMessWord.Length;
                 if (userMessWord[1] == "&all")
                 {
-                    User.AddedShares.RemoveRange(0, User.SharesQuant);
-                    User.SharesQuant = 0;
+                    _users[eventArgs].AddedShares.RemoveRange(0, _users[eventArgs].SharesQuant);
+                    _users[eventArgs].SharesQuant = 0;
                     botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "All shares were deleted from list");
                 }
                 else
                 {
-                    if (Del_Several_Shares(userMessWord))
+                    if (Del_Several_Shares(userMessWord, eventArgs))
                         botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
                             count > 2 ? "Shares were deleted from list" : "Share was deleted from list");
                     else
@@ -215,7 +215,7 @@ namespace lab4
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking shares from the list was stopped");
-                User.STimer.Enabled = false;
+                _users[eventArgs].STimer.Enabled = false;
             }
 
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
@@ -229,18 +229,20 @@ namespace lab4
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 var userMess = eventArgs.Message.Text;
-                var userMessWord = userMess.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                var userMessWord = userMess.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
                 if (userMessWord[1].Split('.').Length - 1 > 1)
                 {
                     botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Incorrect value for interval");
                     return;
                 }
+
                 CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
 
-                User.CheckInterval = double.Parse(userMessWord[1]);
-                User.STimer.Interval = User.CheckInterval * 60 * 1000;
-                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking interval set to " + User.CheckInterval + " mins");
+                _users[eventArgs].CheckInterval = double.Parse(userMessWord[1]);
+                _users[eventArgs].STimer.Interval = _users[eventArgs].CheckInterval * 60 * 1000;
+                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
+                    "Checking interval set to " + _users[eventArgs].CheckInterval + " mins");
 
                 Thread.CurrentThread.CurrentCulture = tempCulture;
             }
@@ -273,7 +275,6 @@ namespace lab4
             };
 
             var bot = new TelegramBotClient("1743657186:AAEyqLtqL95eKUZANc0hefOsySyWgcz7dVc");
-            SetTimer();
             bot.StartReceiving();
 
             bot.OnMessage += Bot_OnMessage;
@@ -282,10 +283,10 @@ namespace lab4
 
             bot.StopReceiving();
         }
-
-        private static void SetTimer()
+        
+        private static void SetTimer(MessageEventArgs e)
         {
-            User.STimer = new System.Timers.Timer(Constants.Interval5Min) {AutoReset = true, Enabled = false};
+            _users[e].STimer = new Timer(Constants.Interval5Min) {AutoReset = true, Enabled = false};
         }
 
         private static bool OnPreRequest(HttpWebRequest request)
@@ -294,11 +295,21 @@ namespace lab4
             return true;
         }
 
+        private static void Add_User(MessageEventArgs e)
+        {
+            if (_users.ContainsKey(e) == false)
+            {
+                _users.Add(e, new User());
+                SetTimer(e);
+            }
+        }
         private static void Bot_OnMessage(object sender, MessageEventArgs e)
         {
             var bot = sender as TelegramBotClient;
-            var userMessWord = e.Message.Text.Split(new[] { " " },
-                                            StringSplitOptions.RemoveEmptyEntries);
+            var userMessWord = e.Message.Text.Split(new[] {" "},
+                StringSplitOptions.RemoveEmptyEntries);
+
+            Add_User(e);
 
             var command = CommandFactory.Get(userMessWord[0]);
             command.Process(bot, e);
@@ -333,61 +344,62 @@ namespace lab4
             printcommand.Process(bot, e, share);
         }
 
-        private static bool Add_Share(string shareCode)
+        private static bool Add_Share(string shareCode, MessageEventArgs e)
         {
-            User.AddedShares.Add(new Share());
-            User.AddedShares[User.SharesQuant].Name = shareCode;
-            User.AddedShares[User.SharesQuant].Cost = null;
-            User.SharesQuant += 1;
-            User.AddedShares = User.AddedShares.ToList();
+            _users[e].AddedShares.Add(new Share());
+            _users[e].AddedShares[_users[e].SharesQuant].Name = shareCode;
+            _users[e].AddedShares[_users[e].SharesQuant].Cost = null;
+            _users[e].SharesQuant += 1;
+            _users[e].AddedShares = _users[e].AddedShares.ToList();
             return true;
         }
 
-        private static bool Add_Several_Shares(string[] shareCodes)
+        private static bool Add_Several_Shares(string[] shareCodes, MessageEventArgs e)
         {
             for (var i = 1; i < shareCodes.Length; i += 1)
-                if (!Add_Share(shareCodes[i]))
+                if (!Add_Share(shareCodes[i], e))
                     return false;
             return true;
         }
 
-        private static bool Del_Share(string shareCode)
+        private static bool Del_Share(string shareCode, MessageEventArgs e)
         {
-            foreach (var share in User.AddedShares.ToList())
+            foreach (var share in _users[e].AddedShares.ToList())
                 if (share.Name == shareCode)
                 {
-                    User.AddedShares.Remove(share);
-                    User.SharesQuant -= 1;
+                    _users[e].AddedShares.Remove(share);
+                    _users[e].SharesQuant -= 1;
                 }
+
             return true;
         }
 
-        private static bool Del_Several_Shares(string[] shareCodes)
+        private static bool Del_Several_Shares(string[] shareCodes, MessageEventArgs e)
         {
             for (var i = 1; i < shareCodes.Length; i += 1)
-                if (!Del_Share(shareCodes[i]))
+                if (!Del_Share(shareCodes[i], e))
                     return false;
-            User.AddedShares = User.AddedShares.ToList();
+            _users[e].AddedShares = _users[e].AddedShares.ToList();
             return true;
         }
 
         private static bool List_Share(TelegramBotClient sender, MessageEventArgs e)
         {
-            foreach (var share in User.AddedShares) Share_Info(sender, e, Constants.ShortMess, share.Name);
+            foreach (var share in _users[e].AddedShares) Share_Info(sender, e, Constants.ShortMess, share.Name);
 
-            return User.SharesQuant != -1;
+            return _users[e].SharesQuant != -1;
         }
 
         private static void Start_Checking(TelegramBotClient bot, MessageEventArgs e)
         {
-            User.STimer.Enabled = true;
-            User.STimer.Elapsed += (tSender, tE) =>
+            _users[e].STimer.Enabled = true;
+            _users[e].STimer.Elapsed += (tSender, tE) =>
             {
-                foreach (var share in User.AddedShares.ToList())
+                foreach (var share in _users[e].AddedShares.ToList())
                 {
                     Share_Info(bot, e, Constants.EventMess, share.Name, share);
                 }
-                
+
             };
         }
 
@@ -404,7 +416,7 @@ namespace lab4
             public static HtmlDocument GetUrl(MessageEventArgs e, string shareCode)
             {
                 var url = "https://finance.yahoo.com/quote/";
-                var userMessWord = e.Message.Text.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                var userMessWord = e.Message.Text.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
                 var count = userMessWord.Length;
 
                 if (shareCode == null) shareCode = count > 1 ? userMessWord[1] : userMessWord[0];
@@ -412,7 +424,7 @@ namespace lab4
                 url = url + shareCode + '/';
 
 
-                var handler = new HttpClientHandler { AllowAutoRedirect = true };
+                var handler = new HttpClientHandler {AllowAutoRedirect = true};
                 var httpClient = new HttpClient(handler);
                 var response = httpClient.GetAsync(url).Result;
                 Console.WriteLine(response);
@@ -454,14 +466,15 @@ namespace lab4
                     .Where(x => x.Attributes["class"] != null)
                     .FirstOrDefault(x => x.Attributes["class"].Value == "Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)");
                 if (descHtml?.InnerText != null)
-                    Cost = Math.Round(double.Parse(descHtml.InnerText[Range.EndAt(descHtml.InnerText.Length)]), 2).ToString(CultureInfo.InvariantCulture);
+                    Cost = Math.Round(double.Parse(descHtml.InnerText[Range.EndAt(descHtml.InnerText.Length)]), 2)
+                        .ToString(CultureInfo.InvariantCulture);
 
                 descHtml = elements.SelectMany(x => x.DescendantsAndSelf("div"))
                     .Where(x => x.Attributes["class"] != null)
                     .FirstOrDefault(x => x.Attributes["class"].Value == "C($tertiaryColor) Fz(12px)");
                 if (descHtml?.InnerText != null)
-                { 
-                    var sharePlat = descHtml.InnerText.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                {
+                    var sharePlat = descHtml.InnerText.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
                     Val = sharePlat[^1]; // Takes last word in string, usual that is "USD"
                 }
 
@@ -479,10 +492,11 @@ namespace lab4
                     Costdif = "0.00";
                     Val = compShare.Val;
                 }
-                    
+
                 else
-                    Costdif = (Math.Round(double.Parse(Cost) 
+                    Costdif = (Math.Round(double.Parse(Cost)
                                           - double.Parse(compShare.Cost)), 2).ToString();
+
                 Cost = compShare.Cost;
                 Name = compShare.Name;
             }
@@ -490,14 +504,15 @@ namespace lab4
 
         }
 
+        private static Dictionary<MessageEventArgs, User> _users = new Dictionary<MessageEventArgs, User> ();
 
-        private class User
+    private class User
         {
-            public static System.Timers.Timer STimer;
-            public static double CheckInterval;
+            public Timer STimer;
+            public double CheckInterval;
 
-            public static List<Share> AddedShares = new List<Share>();
-            public static int SharesQuant;
+            public List<Share> AddedShares = new List<Share>();
+            public int SharesQuant;
 
             public User() { CheckInterval = Constants.Interval5Min; }
         }
