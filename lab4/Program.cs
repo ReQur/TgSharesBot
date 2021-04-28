@@ -496,7 +496,10 @@ namespace lab4
         }
 
 
-        
+        private class user
+        {
+
+        }
 
         private static class Constants
         {
