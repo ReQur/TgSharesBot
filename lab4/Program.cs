@@ -506,7 +506,7 @@ namespace lab4
 
         private static Dictionary<long, User> _users = new Dictionary<long, User> ();
 
-    private class User
+        private class User
         {
             public Timer STimer;
             public double CheckInterval;
