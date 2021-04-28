@@ -8,18 +8,13 @@ using System.Threading;
 using HtmlAgilityPack;
 using Telegram.Bot;
 using Telegram.Bot.Args;
+using Timer = System.Timers.Timer;
 
 
 namespace lab4
 {
     internal class Program
     {
-        private static System.Timers.Timer _sTimer;
-        private static double _checkInterval = Constants.Interval5Min;
-
-        private static List<Share> _addedShares = new List<Share>();
-        private static int _sharesQuant;
-
         private class CommandFactory
         {
             public static Command Get(string message)
@@ -180,8 +175,8 @@ namespace lab4
                 var count = userMessWord.Length;
                 if (userMessWord[1] == "&all")
                 {
-                    _addedShares.RemoveRange(0, _sharesQuant);
-                    _sharesQuant = 0;
+                    User.AddedShares.RemoveRange(0, User.SharesQuant);
+                    User.SharesQuant = 0;
                     botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "All shares were deleted from list");
                 }
                 else
@@ -220,7 +215,7 @@ namespace lab4
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
             {
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking shares from the list was stopped");
-                _sTimer.Enabled = false;
+                User.STimer.Enabled = false;
             }
 
             public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
@@ -243,9 +238,9 @@ namespace lab4
                 CultureInfo tempCulture = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
 
-                _checkInterval = double.Parse(userMessWord[1]);
-                _sTimer.Interval = _checkInterval * 60 * 1000;
-                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking interval set to " + _checkInterval + " mins");
+                User.CheckInterval = double.Parse(userMessWord[1]);
+                User.STimer.Interval = User.CheckInterval * 60 * 1000;
+                botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking interval set to " + User.CheckInterval + " mins");
 
                 Thread.CurrentThread.CurrentCulture = tempCulture;
             }
@@ -290,7 +285,7 @@ namespace lab4
 
         private static void SetTimer()
         {
-            _sTimer = new System.Timers.Timer(Constants.Interval5Min) {AutoReset = true, Enabled = false};
+            User.STimer = new System.Timers.Timer(Constants.Interval5Min) {AutoReset = true, Enabled = false};
         }
 
         private static bool OnPreRequest(HttpWebRequest request)
@@ -340,11 +335,11 @@ namespace lab4
 
         private static bool Add_Share(string shareCode)
         {
-            _addedShares.Add(new Share());
-            _addedShares[_sharesQuant].Name = shareCode;
-            _addedShares[_sharesQuant].Cost = null;
-            _sharesQuant += 1;
-            _addedShares = _addedShares.ToList();
+            User.AddedShares.Add(new Share());
+            User.AddedShares[User.SharesQuant].Name = shareCode;
+            User.AddedShares[User.SharesQuant].Cost = null;
+            User.SharesQuant += 1;
+            User.AddedShares = User.AddedShares.ToList();
             return true;
         }
 
@@ -358,11 +353,11 @@ namespace lab4
 
         private static bool Del_Share(string shareCode)
         {
-            foreach (var share in _addedShares.ToList())
+            foreach (var share in User.AddedShares.ToList())
                 if (share.Name == shareCode)
                 {
-                    _addedShares.Remove(share);
-                    _sharesQuant -= 1;
+                    User.AddedShares.Remove(share);
+                    User.SharesQuant -= 1;
                 }
             return true;
         }
@@ -372,23 +367,23 @@ namespace lab4
             for (var i = 1; i < shareCodes.Length; i += 1)
                 if (!Del_Share(shareCodes[i]))
                     return false;
-            _addedShares = _addedShares.ToList();
+            User.AddedShares = User.AddedShares.ToList();
             return true;
         }
 
         private static bool List_Share(TelegramBotClient sender, MessageEventArgs e)
         {
-            foreach (var share in _addedShares) Share_Info(sender, e, Constants.ShortMess, share.Name);
+            foreach (var share in User.AddedShares) Share_Info(sender, e, Constants.ShortMess, share.Name);
 
-            return _sharesQuant != -1;
+            return User.SharesQuant != -1;
         }
 
         private static void Start_Checking(TelegramBotClient bot, MessageEventArgs e)
         {
-            _sTimer.Enabled = true;
-            _sTimer.Elapsed += (tSender, tE) =>
+            User.STimer.Enabled = true;
+            User.STimer.Elapsed += (tSender, tE) =>
             {
-                foreach (var share in _addedShares.ToList())
+                foreach (var share in User.AddedShares.ToList())
                 {
                     Share_Info(bot, e, Constants.EventMess, share.Name, share);
                 }
@@ -496,9 +491,15 @@ namespace lab4
         }
 
 
-        private class user
+        private class User
         {
+            public static System.Timers.Timer STimer;
+            public static double CheckInterval;
 
+            public static List<Share> AddedShares = new List<Share>();
+            public static int SharesQuant;
+
+            public User() { CheckInterval = Constants.Interval5Min; }
         }
 
         private static class Constants
