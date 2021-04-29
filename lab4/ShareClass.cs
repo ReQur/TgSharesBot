@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using HtmlAgilityPack;
 using Telegram.Bot.Args;
 
@@ -13,24 +12,19 @@ namespace lab4
     {
         private class Share
         {
-            private sealed class NameCostEqualityComparer : IEqualityComparer<Share>
+            private sealed class TimeCostComparer
             {
-                public bool Equals(Share x, Share y)
+                public CostHistory Compare(Share x, Share y)
                 {
-                    if (ReferenceEquals(x, y)) return true;
-                    if (ReferenceEquals(x, null)) return false;
-                    if (ReferenceEquals(y, null)) return false;
-                    if (x.GetType() != y.GetType()) return false;
-                    return x.Name == y.Name && x.Cost == y.Cost;
-                }
-
-                public int GetHashCode(Share obj)
-                {
-                    return HashCode.Combine(obj.Name, obj.Cost);
+                    if (ReferenceEquals(x, y)) return null;
+                    if (ReferenceEquals(x, null)) return null;
+                    if (ReferenceEquals(y, null)) return null;
+                    if (x.GetType() != y.GetType()) return null;
+                    return new CostHistory((Math.Round(double.Parse(x.CheckTime)
+                                       - double.Parse(y.CheckTime)), 2).ToString(),  x.Cost, 
+                        (Math.Round(double.Parse(x.Cost) - double.Parse(y.Cost)), 2).ToString());
                 }
             }
-
-            public static IEqualityComparer<Share> NameCostComparer { get; } = new NameCostEqualityComparer();
 
             public string Name { get; set; }
             public string Cost { get; set; }
@@ -38,6 +32,29 @@ namespace lab4
             public string Opened { get; set; }
             public string Closed { get; set; }
             public string Costdif { get; set; }
+            public string CheckTime { get; set; }
+
+            public List<CostHistory> CostHistories;
+
+            public Share()
+            {
+                CostHistories = new List<CostHistory>();}
+
+            public class CostHistory
+            {
+                public string TimeInterval;
+                public string Endcost;
+                public string CostDifferecne;
+
+                public CostHistory(string timeInterval, string endCost, string costDifferecne)
+                {
+                    TimeInterval = timeInterval;
+                    Endcost = endCost;
+                    CostDifferecne = costDifferecne;
+
+                }
+
+            }
 
             public static HtmlDocument GetUrl(MessageEventArgs e, string shareCode)
             {
