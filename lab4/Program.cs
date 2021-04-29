@@ -47,51 +47,35 @@ namespace lab4
 
         private abstract class Command
         {
-            public abstract void Process(TelegramBotClient botclient, MessageEventArgs eventArgs);
-            public abstract void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share);
+            public abstract void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null);
         }
 
         private class ExtendedMessageCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
-                throw new NotImplementedException();
-            }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                var mess = share.Name + '\n' + share.Cost + ' ' + share.Val + '\n'
-                           + "Previous close " + share.Closed + ' ' + share.Val + '\n'
-                           + "Open " + share.Opened + ' ' + share.Val;
+                var mess = share?.Name + '\n' + share?.Cost + ' ' + share?.Val + '\n'
+                           + "Previous close " + share?.Closed + ' ' + share?.Val + '\n'
+                           + "Open " + share?.Opened + ' ' + share?.Val;
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, mess);
             }
         }
 
         private class ShortMessageCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
-                throw new NotImplementedException();
-            }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                var shortMess = share.Name + '\n' + share.Cost + ' ' + share.Val;
+                var shortMess = share?.Name + '\n' + share?.Cost + ' ' + share?.Val;
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, shortMess);
             }
         }
 
         private class EventMessageCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
-                throw new NotImplementedException();
-            }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                string eventMess = share.Name + '\n' + share.Cost + ' ' + share.Val;
-                if (share.Costdif != null && share.Costdif != "0.00")
+                string eventMess = share?.Name + '\n' + share?.Cost + ' ' + share?.Val;
+                if (share?.Costdif != null && share.Costdif != "0.00")
                     eventMess += '\n' + "Cost difference:" + share.Costdif + ' ' + share.Val;
 
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, eventMess);
@@ -100,22 +84,18 @@ namespace lab4
 
         private class ShareCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 var userMess = eventArgs.Message.Text;
                 var userMessWord = userMess.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
                 Share_Info(botclient, eventArgs, Constants.ExtendedMess, userMessWord[1]);
             }
 
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
-            }
         }
 
         private class AddCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 var userMess = eventArgs.Message.Text;
                 var userMessWord = userMess.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
@@ -132,43 +112,28 @@ namespace lab4
                         count > 2 ? "Some shares weren't added in list" : "Share was not added in list");
                 }
             }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
-            }
         }
 
         private class ListCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id,
                     List_Share(botclient, eventArgs) ? "All shares was showed" : "Nothing to show");
-            }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
             }
         }
 
         private class HelpCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 botclient.SendTextMessageAsync(eventArgs.Message.Chat.Id, Constants.HelpDesk);
-            }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
             }
         }
 
         private class DeleteCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 var userMess = eventArgs.Message.Text;
                 var userMessWord = userMess.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
@@ -189,44 +154,29 @@ namespace lab4
                             count > 2 ? "Some shares were not deleted from list" : "Share was not deleted from list");
                 }
             }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
-            }
         }
 
         private class StartCheckingCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Start checking shares from the list");
                 Start_Checking(botclient, eventArgs);
-            }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
             }
         }
 
         private class StopCheckingCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Checking shares from the list was stopped");
                 _users[eventArgs.Message.Chat.Id].STimer.Enabled = false;
-            }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
             }
         }
 
         private class SetIntervalCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 var userMess = eventArgs.Message.Text;
                 var userMessWord = userMess.Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
@@ -246,24 +196,14 @@ namespace lab4
 
                 Thread.CurrentThread.CurrentCulture = tempCulture;
             }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
-            }
         }
 
         private class WrongCommand : Command
         {
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs)
+            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share = null)
             {
                 botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Wrong Command");
-            }
-
-            public override void Process(TelegramBotClient botclient, MessageEventArgs eventArgs, Share share)
-            {
-                throw new NotImplementedException();
-            }
+            } 
         }
 
         private static void Main()
