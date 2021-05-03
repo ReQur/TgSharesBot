@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using HtmlAgilityPack;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -54,14 +54,18 @@ namespace lab4
         }
         private static void Bot_OnMessage(object sender, MessageEventArgs e)
         {
-            var bot = sender as TelegramBotClient;
-            var userMessWord = e.Message.Text.Split(new[] {" "},
-                StringSplitOptions.RemoveEmptyEntries);
+            Parallel.Invoke(() =>
+            {
+                var bot = sender as TelegramBotClient;
+                var userMessWord = e.Message.Text.Split(new[] { " " },
+                    StringSplitOptions.RemoveEmptyEntries);
 
-            Add_User(e);
+                Add_User(e);
 
-            var command = CommandFactory.Get(userMessWord[0]);
-            command.Process(bot, e);
+                var command = CommandFactory.Get(userMessWord[0]);
+                command.Process(bot, e);
+            });
+            
         }
 
         private static void Share_Info(TelegramBotClient bot, MessageEventArgs e, int messType = Constants.ExtendedMess,
@@ -134,7 +138,7 @@ namespace lab4
 
         private static bool List_Share(TelegramBotClient sender, MessageEventArgs e)
         {
-            foreach (var share in _users[e.Message.Chat.Id].AddedShares) Share_Info(sender, e, Constants.ShortMess, share.Name);
+            Parallel.ForEach(_users[e.Message.Chat.Id].AddedShares, share => Share_Info(sender, e, Constants.ShortMess, share.Name));
 
             return _users[e.Message.Chat.Id].SharesQuant != -1;
         }
@@ -144,11 +148,7 @@ namespace lab4
             _users[e.Message.Chat.Id].STimer.Enabled = true;
             _users[e.Message.Chat.Id].STimer.Elapsed += (tSender, tE) =>
             {
-                foreach (var share in _users[e.Message.Chat.Id].AddedShares.ToList())
-                {
-                    Share_Info(bot, e, Constants.EventMess, share.Name, share);
-                }
-
+                Parallel.ForEach(_users[e.Message.Chat.Id].AddedShares, share => Share_Info(bot, e, Constants.EventMess, share.Name, share));
             };
         }
 
