@@ -26,6 +26,7 @@ namespace lab4
                 }
             }
 
+            public string ShortName { get; set; }
             public string Name { get; set; }
             public string Cost { get; set; }
             public string Val { get; set; }
@@ -66,6 +67,7 @@ namespace lab4
 
                 url = url + shareCode + '/';
 
+              
 
                 var handler = new HttpClientHandler { AllowAutoRedirect = true };
                 var httpClient = new HttpClient(handler);
@@ -92,8 +94,12 @@ namespace lab4
                     .Where(x => x.Attributes["class"].Value == "Trsdu(0.3s) " &&
                                 (x.Attributes["data-reactid"].Value == "44" ||
                                  x.Attributes["data-reactid"].Value == "49")).ToList();
-                elements.Add(elements2[0]);
-                elements.Add(elements2[1]);
+                if (elements2.Count != 0)
+                {
+                    elements.Add(elements2[0]);
+                    elements.Add(elements2[1]);
+                }
+                
                 return elements;
             }
 
@@ -108,9 +114,11 @@ namespace lab4
                 descHtml = elements.SelectMany(x => x.Descendants("span"))
                     .Where(x => x.Attributes["class"] != null)
                     .FirstOrDefault(x => x.Attributes["class"].Value == "Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)");
-                if (descHtml?.InnerText != null)
+                if ((descHtml?.InnerText != null) && (descHtml?.InnerText != ""))
                     Cost = Math.Round(double.Parse(descHtml.InnerText[Range.EndAt(descHtml.InnerText.Length)]), 2)
                         .ToString(CultureInfo.InvariantCulture);
+
+
 
                 descHtml = elements.SelectMany(x => x.DescendantsAndSelf("div"))
                     .Where(x => x.Attributes["class"] != null)
@@ -121,11 +129,15 @@ namespace lab4
                     Val = sharePlat[^1]; // Takes last word in string, usual that is "USD"
                 }
 
-                descHtml = elements[3];
-                Closed = descHtml.InnerText;
+                if (elements.Count > 3)
+                {
+                    descHtml = elements[3];
+                    Closed = descHtml.InnerText;
 
-                descHtml = elements[4];
-                Opened = descHtml.InnerText;
+                    descHtml = elements[4];
+                    Opened = descHtml.InnerText;
+                }
+                
             }
 
             public void ShareComparison(Share compShare)
@@ -137,8 +149,8 @@ namespace lab4
                 }
 
                 else
-                    Costdif = (Math.Round(double.Parse(Cost)
-                                          - double.Parse(compShare.Cost)), 2).ToString();
+                    Costdif = (Math.Round(double.Parse(compShare.Cost)
+                                          - double.Parse(Cost)), 2).ToString();
 
                 Cost = compShare.Cost;
                 Name = compShare.Name;

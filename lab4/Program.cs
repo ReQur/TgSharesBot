@@ -49,14 +49,20 @@ namespace lab4
             if (_users.ContainsKey(e.Message.Chat.Id) == false)
             {
                 _users.Add(e.Message.Chat.Id, new User());
+                _users[e.Message.Chat.Id].userID = e;
                 SetTimer(e);
             }
         }
         private static void Bot_OnMessage(object sender, MessageEventArgs e)
         {
+             
             Parallel.Invoke(() =>
             {
                 var bot = sender as TelegramBotClient;
+                if (e.Message.Text == null)
+                {
+                    return;
+                }
                 var userMessWord = e.Message.Text.Split(new[] { " " },
                     StringSplitOptions.RemoveEmptyEntries);
 
@@ -65,7 +71,7 @@ namespace lab4
                 var command = CommandFactory.Get(userMessWord[0]);
                 command.Process(bot, e);
             });
-            
+
         }
 
         private static void Share_Info(TelegramBotClient bot, MessageEventArgs e, int messType = Constants.ExtendedMess,
@@ -85,6 +91,7 @@ namespace lab4
             if (share == null)
             {
                 share = new Share();
+                share.ShortName = e.Message.Text.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries)[1];
                 share.ParsEl(elements);
             }
             else
@@ -100,7 +107,7 @@ namespace lab4
         private static bool Add_Share(string shareCode, MessageEventArgs e)
         {
             _users[e.Message.Chat.Id].AddedShares.Add(new Share());
-            _users[e.Message.Chat.Id].AddedShares[_users[e.Message.Chat.Id].SharesQuant].Name = shareCode;
+            _users[e.Message.Chat.Id].AddedShares[_users[e.Message.Chat.Id].SharesQuant].ShortName = shareCode;
             _users[e.Message.Chat.Id].AddedShares[_users[e.Message.Chat.Id].SharesQuant].Cost = null;
             _users[e.Message.Chat.Id].SharesQuant += 1;
             _users[e.Message.Chat.Id].AddedShares = _users[e.Message.Chat.Id].AddedShares.ToList();
@@ -138,18 +145,22 @@ namespace lab4
 
         private static bool List_Share(TelegramBotClient sender, MessageEventArgs e)
         {
-            Parallel.ForEach(_users[e.Message.Chat.Id].AddedShares, share => Share_Info(sender, e, Constants.ShortMess, share.Name));
+            Parallel.ForEach(_users[e.Message.Chat.Id].AddedShares, share => Share_Info(sender, e, Constants.ShortMess, share.ShortName, share));
 
             return _users[e.Message.Chat.Id].SharesQuant != -1;
         }
 
         private static void Start_Checking(TelegramBotClient bot, MessageEventArgs e)
         {
-            _users[e.Message.Chat.Id].STimer.Enabled = true;
-            _users[e.Message.Chat.Id].STimer.Elapsed += (tSender, tE) =>
+            Parallel.Invoke(() =>
             {
-                Parallel.ForEach(_users[e.Message.Chat.Id].AddedShares, share => Share_Info(bot, e, Constants.EventMess, share.Name, share));
-            };
+                _users[e.Message.Chat.Id].STimer.Enabled = true;
+                _users[e.Message.Chat.Id].STimer.Elapsed += (tSender, tE) =>
+                {
+                    _users[e.Message.Chat.Id].CheckShare(bot);
+                };
+            });
+            
         }
 
         private static Dictionary<long, User> _users = new Dictionary<long, User> ();
@@ -159,10 +170,17 @@ namespace lab4
             public Timer STimer;
             public double CheckInterval;
 
+            public MessageEventArgs userID;
+
             public List<Share> AddedShares = new List<Share>();
             public int SharesQuant;
 
             public User() { CheckInterval = Constants.Interval5Min; }
+
+            public void CheckShare(TelegramBotClient bot)
+            {
+                Parallel.ForEach(_users[userID.Message.Chat.Id].AddedShares, share => Share_Info(bot, userID, Constants.EventMess, share.ShortName, share));
+            }
         }
 
         private static class Constants

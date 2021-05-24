@@ -81,6 +81,12 @@ namespace lab4
             {
                 var userMess = eventArgs.Message.Text;
                 var userMessWord = userMess.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                if(userMessWord.Length < 2)
+                {
+                    var command = CommandFactory.Get("Error");
+                    command.Process(botclient, eventArgs);
+                    return;
+                }
                 Share_Info(botclient, eventArgs, Constants.ExtendedMess, userMessWord[1]);
             }
 
@@ -173,7 +179,7 @@ namespace lab4
             {
                 var userMess = eventArgs.Message.Text;
                 var userMessWord = userMess.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
-                if (userMessWord[1].Split('.').Length - 1 > 1)
+                if (userMessWord.Length != 2 || userMessWord[1].Split('.').Length - 1 > 1 || double.Parse(userMessWord[1]) < 0.3)
                 {
                     botclient?.SendTextMessageAsync(eventArgs.Message.Chat.Id, "Incorrect value for interval");
                     return;
